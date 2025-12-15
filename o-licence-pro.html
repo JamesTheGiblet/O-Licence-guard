@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="msapplication-TileColor" content="#1e40af">
+    <title>O-Licence Guard - Enterprise Compliance Portal</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Corporate Fleet Branding */
+            --company-primary: #1e40af; /* Deep Royal Blue */
+            --company-secondary: #3b82f6; 
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-100: #f1f5f9;
+            --gray-800: #1e293b;
+            
+            /* Industrial UI */
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-color, #1e40af); color: var(--gray-800); min-height: 100vh; padding-bottom: 80px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white;
+        }
+        .login-box { 
+            width: 90%; max-width: 400px; text-align: center; 
+            background: rgba(255,255,255,0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .login-role-selector {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 24px 0;
+        }
+        .role-btn {
+            padding: 20px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: white; cursor: pointer; transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .role-btn.active {
+            background: rgba(59, 130, 246, 0.3); border-color: var(--company-secondary);
+        }
+        .login-btn { 
+            margin-top: 20px; padding: 16px; background: var(--company-secondary); 
+            color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%;
+            font-size: 1rem;
+        }
+        .login-demo-note {
+            font-size: 0.8rem; color: #94a3b8; margin-top: 20px; padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* App Header */
+        .app-header {
+            background: white; border-bottom: 1px solid #e2e8f0; padding: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .driver-info { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+        .avatar { width: 40px; height: 40px; background: var(--company-primary); color: white; 
+                 border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+                 font-weight: bold; font-size: 1rem; }
+        .logout-btn {
+            padding: 8px 16px; background: #f1f5f9; color: #64748b; border: none;
+            border-radius: 6px; font-weight: 600; cursor: pointer; display: flex;
+            align-items: center; gap: 8px;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: calc(100vh - 73px);
+        }
+        .sidebar {
+            background: white; border-right: 1px solid #e2e8f0; padding: 24px 0;
+        }
+        .nav-section { margin-bottom: 32px; }
+        .nav-section h3 {
+            padding: 0 20px 12px; color: #64748b; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .nav-item {
+            padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+            color: #64748b; text-decoration: none; font-weight: 500;
+            border-left: 4px solid transparent; cursor: pointer; transition: 0.2s;
+        }
+        .nav-item.active {
+            background: #f0f9ff; color: var(--company-primary);
+            border-left-color: var(--company-primary);
+        }
+        .nav-item:hover { background: #f8fafc; color: var(--gray-800); }
+
+        /* Main Content */
+        .main-content { padding: 24px; background: var(--bg-color); }
+        .content-section { display: block; }
+        .content-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .content-header h2 { color: #1e293b; font-size: 1.5rem; }
+
+        /* Status Banner */
+        .status-banner {
+            padding: 20px; margin: 0 0 24px 0; border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 700; color: white; transition: 0.3s;
+            box-shadow: var(--shadow);
+        }
+        .status-safe { background: linear-gradient(135deg, var(--success), #059669); }
+        .status-warn { background: linear-gradient(135deg, var(--warning), #d97706); }
+        .status-danger { background: linear-gradient(135deg, var(--danger), #dc2626); }
+
+        /* Tab Navigation */
+        .tab-nav { 
+            background: white; margin: 0 0 24px 0; 
+            border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+        }
+        .tab-buttons { display: flex; }
+        .tab-btn {
+            flex: 1; padding: 20px 16px; border: none; background: none;
+            font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; 
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .tab-btn.active { color: var(--company-primary); border-bottom-color: var(--company-primary); background: #f8fafc; }
+        .tab-content { display: none; padding: 20px 0; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards */
+        .card { 
+            background: var(--card-bg); border-radius: var(--radius); padding: 24px; 
+            margin-bottom: 20px; box-shadow: var(--shadow); border: 1px solid #e2e8f0;
+        }
+        .card-header { 
+            display: flex; align-items: center; gap: 12px; 
+            margin-bottom: 20px; color: #334155; font-weight: 600;
+        }
+
+        /* Assessment Tool Specific */
+        .slider-group { margin-bottom: 28px; }
+        .slider-header { 
+            display: flex; justify-content: space-between; margin-bottom: 10px; 
+            font-weight: 500; font-size: 0.95rem; color: #475569;
+        }
+        .slider-val { font-weight: 700; color: var(--company-primary); }
+        input[type=range] { 
+            width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; 
+            outline: none; -webkit-appearance: none; appearance: none;
+        }
+        input[type=range]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 28px; height: 28px; 
+            background: var(--company-primary); border: 4px solid white; 
+            border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .factor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .factor-btn {
+            padding: 16px 12px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px;
+            text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column;
+            align-items: center; gap: 8px;
+        }
+        .factor-btn.active { border-color: var(--company-primary); background: #eff6ff; }
+        .factor-icon { font-size: 1.5rem; }
+
+        #chart-container { 
+            width: 100%; height: 350px; border-radius: 8px; 
+            overflow: hidden; background: white; margin-bottom: 20px;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+            margin: 24px 0;
+        }
+        .metric-box {
+            background: white; padding: 20px; border-radius: 8px;
+            text-align: center; border: 1px solid #e2e8f0; box-shadow: var(--shadow);
+        }
+        .metric-val { font-size: 2rem; font-weight: 800; color: var(--company-primary); }
+        .metric-label { font-size: 0.85rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
+
+        /* Report View */
+        .report-line { 
+            display: flex; justify-content: space-between; padding: 16px 0; 
+            border-bottom: 1px solid #f1f5f9; font-size: 0.95rem;
+        }
+        .report-label { color: #64748b; }
+        .report-val { font-weight: 600; }
+
+        /* Action Buttons */
+        .action-btn {
+            width: 100%; padding: 16px; background: var(--company-primary); color: white;
+            border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            transition: 0.3s; margin-top: 16px;
+        }
+        .action-btn:hover { background: var(--company-secondary); }
+        .action-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .action-btn.secondary { background: #64748b; }
+
+        /* Supervisor Dashboard */
+        .supervisor-stats {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white; padding: 24px; border-radius: var(--radius);
+            box-shadow: var(--shadow); text-align: center;
+        }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--company-primary); }
+        .stat-label { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
+
+        .driver-table {
+            width: 100%; background: white; border-radius: var(--radius);
+            overflow: hidden; box-shadow: var(--shadow); border: 1px solid #e2e8f0;
+        }
+        .driver-table th {
+            background: #f8fafc; padding: 16px; text-align: left;
+            font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0;
+        }
+        .driver-table td {
+            padding: 16px; border-bottom: 1px solid #f1f5f9;
+        }
+
+        .status-badge {
+            padding: 6px 12px; border-radius: 20px; font-size: 0.75rem;
+            font-weight: 700; text-transform: uppercase; display: inline-block;
+        }
+        .status-compliant { background: #dcfce7; color: #166534; }
+        .status-caution { background: #fef3c7; color: #92400e; }
+        .status-violation { background: #fee2e2; color: #991b1b; }
+
+        /* Training Modules */
+        .training-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px; margin-top: 20px;
+        }
+        .training-card {
+            background: white; padding: 20px; border-radius: var(--radius);
+            border: 1px solid #e2e8f0; box-shadow: var(--shadow);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .sidebar { 
+                display: none; position: fixed; top: 73px; left: 0; width: 260px; height: calc(100% - 73px);
+                z-index: 1001; box-shadow: 4px 0 12px rgba(0,0,0,0.1); overflow-y: auto;
+            }
+            .sidebar.active { display: block; animation: slideRight 0.3s; }
+            .factor-grid { grid-template-columns: repeat(2, 1fr); }
+            .supervisor-stats { grid-template-columns: repeat(2, 1fr); }
+            .menu-toggle { display: block !important; }
+        }
+        
+        @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .menu-toggle { display: none; font-size: 1.2rem; color: var(--gray-800); cursor: pointer; margin-right: 12px; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <div style="font-size: 3rem; margin-bottom: 16px; color: #3b82f6;">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2 style="margin-bottom: 8px; font-size: 1.8rem;">O-Licence Guard</h2>
+            <p style="opacity: 0.7; margin-bottom: 30px; font-size: 1rem;">Enterprise Fleet Compliance Portal</p>
+            
+            <div class="login-role-selector">
+                <div class="role-btn active" onclick="selectRole('driver')" tabindex="0" role="button" onkeydown="handleRoleKey(event)" aria-label="Select Driver Role">
+                    <i class="fas fa-truck" style="font-size: 1.5rem;"></i>
+                    <span>Driver</span>
+                    <small style="font-size: 0.7rem; opacity: 0.7;">Daily Pre-Shift</small>
+                </div>
+                <div class="role-btn" onclick="selectRole('supervisor')" tabindex="0" role="button" onkeydown="handleRoleKey(event)" aria-label="Select Supervisor Role">
+                    <i class="fas fa-user-tie" style="font-size: 1.5rem;"></i>
+                    <span>Supervisor</span>
+                    <small style="font-size: 0.7rem; opacity: 0.7;">Fleet Overview</small>
+                </div>
+            </div>
+            
+            <button class="login-btn" onclick="login()">
+                Enter Portal <i class="fas fa-arrow-right"></i>
+            </button>
+            
+            <div class="login-demo-note">
+                <p><strong>Demo Accounts:</strong></p>
+                <p>Driver: John Mason (DRV-8842)</p>
+                <p>Supervisor: Sarah Wilson</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Interface -->
+    <div id="app-interface" style="display: none;">
+        
+        <!-- App Header -->
+        <div class="app-header">
+            <div class="header-left">
+                <div class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <div style="font-weight: 800; font-size: 1.1rem; color: var(--company-primary);">
+                    <i class="fas fa-shield-alt"></i> O-Licence Guard
+                </div>
+                <div class="driver-info">
+                    <div class="avatar" id="user-avatar">JM</div>
+                    <div>
+                        <div id="user-name">J. Mason</div>
+                        <div style="font-size: 0.7rem; color: #64748b;" id="user-role">Driver</div>
+                    </div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            
+            <!-- Sidebar Navigation -->
+            <div class="sidebar" id="main-sidebar">
+                <div class="nav-section" id="driver-nav" style="display: none;">
+                    <h3>Driver Tools</h3>
+                    <a class="nav-item active" onclick="showSection('pre-shift')">
+                        <i class="fas fa-clipboard-check"></i> Pre-Shift Check
+                    </a>
+                    <a class="nav-item" onclick="showSection('history')">
+                        <i class="fas fa-history"></i> Check History
+                    </a>
+                    <a class="nav-item" onclick="showSection('training')">
+                        <i class="fas fa-graduation-cap"></i> Training
+                    </a>
+                </div>
+
+                <div class="nav-section" id="supervisor-nav" style="display: none;">
+                    <h3>Supervisor</h3>
+                    <a class="nav-item active" onclick="showSection('fleet')">
+                        <i class="fas fa-tachometer-alt"></i> Fleet Overview
+                    </a>
+                    <a class="nav-item" onclick="showSection('reports')">
+                        <i class="fas fa-chart-bar"></i> Reports
+                    </a>
+                    <a class="nav-item" onclick="showSection('escalations')">
+                        <i class="fas fa-exclamation-circle"></i> Escalations
+                    </a>
+                    <a class="nav-item" onclick="showSection('compliance')">
+                        <i class="fas fa-file-contract"></i> Compliance
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                
+                <!-- DRIVER: Pre-Shift Check Section -->
+                <div id="pre-shift-section" class="content-section">
+                    <div class="content-header">
+                        <h2>Pre-Shift Readiness Assessment</h2>
+                        <div style="display: flex; gap: 12px;">
+                            <button class="logout-btn" onclick="printAssessment()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                            <button class="action-btn" onclick="submitAssessment()" style="width: auto; padding: 10px 20px;">
+                                <i class="fas fa-paper-plane"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="status-banner status-safe" id="main-status-banner">
+                        <span><i class="fas fa-check-circle"></i> FIT TO DRIVE</span>
+                        <span id="safe-hours-badge">12h Window</span>
+                    </div>
+
+                    <div class="tab-nav">
+                        <div class="tab-buttons">
+                            <button class="tab-btn active" onclick="switchTab('tab-check', this)">
+                                <i class="fas fa-clipboard-check"></i> Readiness
+                            </button>
+                            <button class="tab-btn" onclick="switchTab('tab-factors', this)">
+                                <i class="fas fa-sliders-h"></i> Factors
+                            </button>
+                            <button class="tab-btn" onclick="switchTab('tab-report', this)">
+                                <i class="fas fa-file-contract"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="tab-check" class="tab-content active">
+                        <div class="card" style="padding: 10px;">
+                            <div id="chart-container"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-bed"></i> Rest & Recovery
+                            </div>
+                            
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Sleep (Last 24h)</span>
+                                    <span class="slider-val" id="val-sleep">7.0 hrs</span>
+                                </div>
+                                <input type="range" id="input-sleep" min="0" max="12" step="0.5" value="7.0" oninput="updateEngine()" aria-label="Sleep hours">
+                                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:4px;">
+                                    <span>0h (Critical)</span>
+                                    <span>8h (Optimal)</span>
+                                </div>
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Alcohol Units (Previous Night)</span>
+                                    <span class="slider-val" id="val-alcohol">0 units</span>
+                                </div>
+                                <input type="range" id="input-alcohol" min="0" max="20" step="1" value="0" oninput="updateEngine()" aria-label="Alcohol units">
+                                <div style="font-size: 0.75rem; color: var(--danger); background: #fef2f2; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                                    <i class="fas fa-info-circle"></i> 1 Unit takes approx 1 hour to metabolize.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-factors" class="tab-content">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-plus-circle"></i> Shift Conditions
+                            </div>
+                            <div class="factor-grid" id="factor-grid">
+                                <!-- Factors will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-clock"></i> Shift Type
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button class="factor-btn" style="flex:1" onclick="setShift('day', this)" id="btn-day">
+                                    <i class="fas fa-sun"></i> Day Shift
+                                </button>
+                                <button class="factor-btn" style="flex:1" onclick="setShift('night', this)" id="btn-night">
+                                    <i class="fas fa-moon"></i> Night Shift
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-report" class="tab-content">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-file-signature"></i> Pre-Shift Declaration
+                            </div>
+                            
+                            <div class="report-line">
+                                <span class="report-label">Driver Readiness Score</span>
+                                <span class="report-val" id="rep-score">95%</span>
+                            </div>
+                            <div class="report-line">
+                                <span class="report-label">Est. Safe Driving Window</span>
+                                <span class="report-val" id="rep-window">12 Hours</span>
+                            </div>
+                            <div class="report-line">
+                                <span class="report-label">Compliance Status</span>
+                                <span class="report-val" id="rep-status" style="color:var(--success)">COMPLIANT</span>
+                            </div>
+                            
+                            <div style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 16px; font-size: 0.85rem; color: #64748b;">
+                                <label style="display:flex; gap:8px; align-items:start;">
+                                    <input type="checkbox" id="declaration-check" onchange="toggleSubmit()">
+                                    <span>I declare that I am fit to drive and free from the influence of alcohol or drugs. I understand that false declarations put the Operator Licence at risk.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button class="action-btn" id="btn-submit" disabled onclick="submitShift()">
+                            <i class="fas fa-paper-plane"></i> Submit to Dispatch
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DRIVER: History Section -->
+                <div id="history-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Check History</h2>
+                        <select onchange="filterHistory()" style="padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px;" aria-label="Filter history">
+                            <option value="all">All Time</option>
+                            <option value="week">Last 7 Days</option>
+                            <option value="month">Last 30 Days</option>
+                        </select>
+                    </div>
+                    
+                    <div id="history-list" class="card">
+                        <p style="text-align: center; color: #64748b; padding: 40px;">Loading history...</p>
+                    </div>
+                </div>
+
+                <!-- DRIVER: Training Section -->
+                <div id="training-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Training Modules</h2>
+                        <div style="color: #64748b; font-size: 0.9rem;">
+                            Required CPC Training: 35 hours completed
+                        </div>
+                    </div>
+                    
+                    <div class="training-grid">
+                        <div class="training-card">
+                            <h3 style="margin-bottom: 12px;">WTD Regulations</h3>
+                            <p style="color: #64748b; margin-bottom: 16px; font-size: 0.9rem;">
+                                Understanding Working Time Directive requirements for drivers
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #10b981; font-weight: 600;">
+                                    <i class="fas fa-check-circle"></i> Completed
+                                </span>
+                                <span style="color: #64748b; font-size: 0.9rem;">15 min</span>
+                            </div>
+                        </div>
+                        <div class="training-card">
+                            <h3 style="margin-bottom: 12px;">Fatigue Management</h3>
+                            <p style="color: #64748b; margin-bottom: 16px; font-size: 0.9rem;">
+                                Recognizing fatigue symptoms and prevention strategies
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #f59e0b; font-weight: 600;">
+                                    <i class="fas fa-clock"></i> In Progress
+                                </span>
+                                <span style="color: #64748b; font-size: 0.9rem;">20 min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR: Fleet Overview -->
+                <div id="fleet-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Fleet Compliance Dashboard</h2>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <select onchange="updateFleetView()" style="padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px;" aria-label="Select time period">
+                                <option>Today</option>
+                                <option>This Week</option>
+                                <option>This Month</option>
+                            </select>
+                            <button class="action-btn" onclick="exportReport()" style="width: auto; padding: 10px 20px;">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="supervisor-stats">
+                        <div class="stat-card">
+                            <div class="stat-value">42</div>
+                            <div class="stat-label">Active Drivers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: #10b981;">92%</div>
+                            <div class="stat-label">Compliance Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: #f59e0b;">5</div>
+                            <div class="stat-label">At Risk</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: #ef4444;">3</div>
+                            <div class="stat-label">Escalations</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-users"></i> Driver Status Overview
+                        </div>
+                        <table class="driver-table">
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Vehicle</th>
+                                    <th>Check Time</th>
+                                    <th>Status</th>
+                                    <th>Safe Hours</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>John Mason</strong><br><small>#DRV-8842</small></td>
+                                    <td>MAN TGX (KX72 YGB)</td>
+                                    <td>07:15 AM</td>
+                                    <td><span class="status-badge status-compliant">Compliant</span></td>
+                                    <td>8.5h</td>
+                                    <td><button class="logout-btn" style="padding: 6px 12px; font-size: 0.8rem;">View</button></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sarah Johnson</strong><br><small>#DRV-7189</small></td>
+                                    <td>Volvo FH (BD22 DEF)</td>
+                                    <td>06:45 AM</td>
+                                    <td><span class="status-badge status-caution">Fatigue Risk</span></td>
+                                    <td>5.2h</td>
+                                    <td><button class="logout-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #fef3c7; color: #92400e;">Review</button></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mike Wilson</strong><br><small>#DRV-6156</small></td>
+                                    <td>Scania R450 (CF45 GHI)</td>
+                                    <td>07:30 AM</td>
+                                    <td><span class="status-badge status-compliant">Compliant</span></td>
+                                    <td>9.0h</td>
+                                    <td><button class="logout-btn" style="padding: 6px 12px; font-size: 0.8rem;">View</button></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Emma Brown</strong><br><small>#DRV-8278</small></td>
+                                    <td>DAF XF (JK12 LMN)</td>
+                                    <td>06:20 AM</td>
+                                    <td><span class="status-badge status-violation">Violation</span></td>
+                                    <td>0.0h</td>
+                                    <td><button class="logout-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #fee2e2; color: #991b1b;">Escalated</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR: Reports Section -->
+                <div id="reports-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Compliance Reports</h2>
+                        <button class="action-btn" onclick="generateReport()" style="width: auto; padding: 10px 20px;">
+                            <i class="fas fa-file-pdf"></i> Generate Report
+                        </button>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-line"></i> Weekly Trends
+                        </div>
+                        <div style="height: 200px; background: #f8fafc; border-radius: 6px; margin-top: 16px; 
+                                 display: flex; align-items: end; justify-content: space-around; padding: 20px;">
+                            <div style="width: 40px; background: #10b981; border-radius: 4px;" title="Mon: 95%"></div>
+                            <div style="width: 40px; background: #10b981; border-radius: 4px; height: 90%;" title="Tue: 92%"></div>
+                            <div style="width: 40px; background: #f59e0b; border-radius: 4px; height: 85%;" title="Wed: 88%"></div>
+                            <div style="width: 40px; background: #10b981; border-radius: 4px; height: 95%;" title="Thu: 96%"></div>
+                            <div style="width: 40px; background: #ef4444; border-radius: 4px; height: 75%;" title="Fri: 78%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR: Escalations Section -->
+                <div id="escalations-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Escalations Requiring Action</h2>
+                        <div style="color: #ef4444; font-weight: 600;">
+                            <i class="fas fa-clock"></i> 3 Urgent Items
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div style="display: flex; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
+                            <div style="background: #fee2e2; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-ban" style="color: #ef4444; font-size: 1.5rem;"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <h3 style="margin-bottom: 8px;">Alcohol Violation - Emma Brown</h3>
+                                <p style="color: #64748b; margin-bottom: 12px;">Driver reported 2 alcohol units with 0 hours clearance. Vehicle start prevented.</p>
+                                <div style="display: flex; gap: 12px; font-size: 0.9rem;">
+                                    <span style="color: #ef4444;"><i class="fas fa-clock"></i> Pending for 2 hours</span>
+                                    <span style="color: #64748b;"><i class="fas fa-user"></i> Awaiting supervisor review</span>
+                                </div>
+                            </div>
+                            <button class="action-btn" onclick="reviewEscalation(1)" style="width: auto; padding: 10px 20px;">Review Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR: Compliance Section -->
+                <div id="compliance-section" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2>Compliance Management</h2>
+                        <button class="action-btn secondary" onclick="scheduleAudit()" style="width: auto; padding: 10px 20px;">
+                            <i class="fas fa-calendar-check"></i> Schedule Audit
+                        </button>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-file-contract"></i> O-Licence Requirements
+                        </div>
+                        <div style="margin-top: 16px;">
+                            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Driver Hours Compliance</span>
+                                <span style="color: #10b981; font-weight: 600;">98%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Vehicle Maintenance</span>
+                                <span style="color: #10b981; font-weight: 600;">100%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                                <span>Training Completion</span>
+                                <span style="color: #f59e0b; font-weight: 600;">87%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- End Main Content -->
+        </div><!-- End Dashboard Grid -->
+    </div><!-- End App Interface -->
+
+    <script>
+        // ============================
+        // ENTERPRISE MANAGEMENT SYSTEM
+        // ============================
+
+        // Configuration
+        const CONFIG = {
+            factors: [
+                { id: 'meds', name: 'Cold/Flu Meds', val: -20, icon: '💊', type: 'neg' },
+                { id: 'stress', name: 'High Stress', val: -15, icon: '🤯', type: 'neg' },
+                { id: 'food', name: 'Skipped Meal', val: -10, icon: '🍽️', type: 'neg' },
+                { id: 'traffic', name: 'Heavy Traffic', val: -10, icon: '🚛', type: 'neg' },
+                { id: 'coffee', name: 'Caffeine', val: 10, icon: '☕', type: 'pos' },
+                { id: 'rest', name: '45m Rest', val: 20, icon: '🅿️', type: 'pos' },
+                { id: 'breakfast', name: 'Good Breakfast', val: 15, icon: '🥗', type: 'pos' },
+                { id: 'hydration', name: 'Hydrated', val: 10, icon: '💧', type: 'pos' },
+                { id: 'exercise', name: 'Morning Exercise', val: 10, icon: '🏃', type: 'pos' }
+            ],
+            drivers: [
+                { id: 'DRV-8842', name: 'John Mason', avatar: 'JM', vehicle: 'MAN TGX (KX72 YGB)', role: 'driver' },
+                { id: 'DRV-7189', name: 'Sarah Johnson', avatar: 'SJ', vehicle: 'Volvo FH (BD22 DEF)', role: 'driver' },
+                { id: 'DRV-6156', name: 'Mike Wilson', avatar: 'MW', vehicle: 'Scania R450 (CF45 GHI)', role: 'driver' },
+                { id: 'DRV-8278', name: 'Emma Brown', avatar: 'EB', vehicle: 'DAF XF (JK12 LMN)', role: 'driver' }
+            ],
+            supervisors: [
+                { id: 'SUP-1001', name: 'Sarah Wilson', avatar: 'SW', role: 'supervisor' }
+            ]
+        };
+
+        // Application State
+        let appState = {
+            currentUser: null,
+            selectedRole: 'driver',
+            
+            // Driver Assessment State
+            sleep: 7,
+            alcohol: 0,
+            isNight: false,
+            activeFactors: [],
+            
+            // History & Data
+            checkHistory: JSON.parse(localStorage.getItem('checkHistory') || '[]'),
+            escalations: JSON.parse(localStorage.getItem('escalations') || '[]'),
+            activityLog: JSON.parse(localStorage.getItem('activityLog') || '[]')
+        };
+
+        // ======================
+        // LOGIN & AUTHENTICATION
+        // ======================
+
+        function toggleSidebar() {
+            const sb = document.getElementById('main-sidebar');
+            sb.classList.toggle('active');
+        }
+
+        function handleRoleKey(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.target.click();
+            }
+        }
+
+        function selectRole(role) {
+            appState.selectedRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.role-btn').classList.add('active');
+        }
+
+        function login() {
+            if (appState.selectedRole === 'driver') {
+                appState.currentUser = CONFIG.drivers[0]; // Default driver
+            } else {
+                appState.currentUser = CONFIG.supervisors[0]; // Default supervisor
+            }
+            
+            // Store user session
+            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+            
+            // Hide login, show app
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-interface').style.display = 'block';
+            
+            // Initialize UI based on role
+            initializeApp();
+            
+            // Log activity
+            logActivity('login');
+        }
+
+        function logout() {
+            logActivity('logout');
+            localStorage.removeItem('currentUser');
+            appState.currentUser = null;
+            
+            // Show login, hide app
+            document.getElementById('login-overlay').style.display = 'flex';
+            document.getElementById('app-interface').style.display = 'none';
+        }
+
+        function initializeApp() {
+            // Update user info in header
+            document.getElementById('user-name').textContent = appState.currentUser.name;
+            document.getElementById('user-role').textContent = appState.currentUser.role.charAt(0).toUpperCase() + appState.currentUser.role.slice(1);
+            document.getElementById('user-avatar').textContent = appState.currentUser.avatar;
+            
+            // Show appropriate navigation
+            if (appState.currentUser.role === 'driver') {
+                document.getElementById('driver-nav').style.display = 'block';
+                document.getElementById('supervisor-nav').style.display = 'none';
+                showSection('pre-shift');
+                initAssessmentTool();
+            } else {
+                document.getElementById('driver-nav').style.display = 'none';
+                document.getElementById('supervisor-nav').style.display = 'block';
+                showSection('fleet');
+            }
+            
+            // Load history
+            loadHistory();
+        }
+
+        function logActivity(action) {
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                userId: appState.currentUser?.id,
+                userName: appState.currentUser?.name,
+                action: action,
+                userAgent: navigator.userAgent
+            };
+            
+            appState.activityLog.push(logEntry);
+            localStorage.setItem('activityLog', JSON.stringify(appState.activityLog.slice(-1000)));
+        }
+
+        // ====================
+        // NAVIGATION & LAYOUT
+        // ====================
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Deactivate all nav items
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId + '-section').style.display = 'block';
+            
+            // Activate corresponding nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            for (let item of navItems) {
+                if (item.getAttribute('onclick')?.includes(sectionId)) {
+                    item.classList.add('active');
+                    break;
+                }
+            }
+            
+            // Close sidebar on mobile after selection
+            if(window.innerWidth <= 768) {
+                document.getElementById('main-sidebar').classList.remove('active');
+            }
+        }
+
+        function switchTab(tabId, btn) {
+            // Handle assessment tool tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            
+            if(tabId === 'tab-check') {
+                setTimeout(() => {
+                    Plotly.Plots.resize('chart-container');
+                }, 100);
+            }
+        }
+
+        // ====================
+        // DRIVER ASSESSMENT TOOL
+        // ====================
+
+        function initAssessmentTool() {
+            // Initialize factor grid
+            const grid = document.getElementById('factor-grid');
+            grid.innerHTML = '';
+            
+            CONFIG.factors.forEach(factor => {
+                const btn = document.createElement('div');
+                btn.className = 'factor-btn';
+                btn.innerHTML = `
+                    <span class="factor-icon">${factor.icon}</span>
+                    <span style="font-size: 0.85rem; font-weight: 600;">${factor.name}</span>
+                    <span style="font-size: 0.75rem; color: ${factor.type === 'pos' ? '#10b981' : '#ef4444'};">
+                        ${factor.val > 0 ? '+' : ''}${factor.val} pts
+                    </span>
+                `;
+                btn.onclick = () => toggleFactor(factor.id, btn);
+                grid.appendChild(btn);
+            });
+            
+            // Set default shift type
+            document.getElementById('btn-day').classList.add('active');
+            
+            // Run initial calculation
+            updateEngine();
+        }
+
+        function toggleFactor(id, btn) {
+            if (appState.activeFactors.includes(id)) {
+                appState.activeFactors = appState.activeFactors.filter(x => x !== id);
+                btn.classList.remove('active');
+            } else {
+                if (appState.activeFactors.length >= 6) {
+                    showNotification('Maximum 6 factors allowed. Please reset to add more.', 'warning');
+                    return;
+                }
+                appState.activeFactors.push(id);
+                btn.classList.add('active');
+            }
+            updateEngine();
+        }
+
+        function setShift(type, btn) {
+            appState.isNight = (type === 'night');
+            document.querySelectorAll('#btn-day, #btn-night').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateEngine();
+        }
+
+        function updateEngine() {
+            // Get inputs
+            appState.sleep = parseFloat(document.getElementById('input-sleep').value);
+            appState.alcohol = parseFloat(document.getElementById('input-alcohol').value);
+
+            // Calculate base alertness
+            let baseScore = Math.min(100, (appState.sleep / 8) * 100);
+
+            // Apply factors
+            let factorScore = 0;
+            appState.activeFactors.forEach(fid => {
+                const f = CONFIG.factors.find(i => i.id === fid);
+                factorScore += f.val;
+            });
+
+            let startScore = Math.max(0, Math.min(100, baseScore + factorScore));
+
+            // Generate fatigue curve
+            let x = [], y = [];
+            let violationHour = null;
+            let alcoholClearanceHour = appState.alcohol;
+
+            for(let h = 0; h <= 15; h++) {
+                x.push(h);
+                
+                let decay = 3.5;
+                if(appState.isNight) decay = 5.5;
+                
+                let circadianPenalty = 0;
+                if(appState.isNight && h >= 4 && h <= 7) circadianPenalty = 15;
+
+                let alcPenalty = 0;
+                if(h < alcoholClearanceHour) alcPenalty = 100;
+
+                let score = startScore - (h * decay) - circadianPenalty - alcPenalty;
+                score = Math.max(0, score);
+                y.push(score);
+
+                if(violationHour === null && score < 30) violationHour = h;
+            }
+
+            renderChart(x, y, violationHour, alcoholClearanceHour);
+            updateUI(startScore, violationHour, alcoholClearanceHour);
+        }
+
+        function renderChart(x, y, violation, alcClear) {
+            const trace1 = {
+                x: x, y: y,
+                mode: 'lines',
+                fill: 'tozeroy',
+                line: { color: appState.alcohol > 0 ? '#ef4444' : '#10b981', width: 3 },
+                name: 'Alertness'
+            };
+
+            const trace2 = {
+                x: [0, 15], y: [30, 30],
+                mode: 'lines',
+                line: { color: '#ef4444', width: 2, dash: 'dash' },
+                name: 'Min Safe Limit'
+            };
+
+            const layout = {
+                margin: { t: 20, r: 20, l: 40, b: 40 },
+                height: 350,
+                showlegend: false,
+                xaxis: { title: 'Hours into Shift' },
+                yaxis: { title: 'Fit Score', range: [0, 100] },
+                paper_bgcolor: 'white',
+                plot_bgcolor: '#f8fafc',
+                shapes: []
+            };
+
+            // Highlight alcohol block
+            if(alcClear > 0) {
+                layout.shapes.push({
+                    type: 'rect',
+                    xref: 'x', yref: 'paper',
+                    x0: 0, x1: alcClear,
+                    y0: 0, y1: 1,
+                    fillcolor: 'rgba(239, 68, 68, 0.2)',
+                    line: { width: 0 }
+                });
+            }
+
+            Plotly.newPlot('chart-container', [trace1, trace2], layout, {displayModeBar: false});
+        }
+
+        function updateUI(score, violation, alcClear) {
+            const banner = document.getElementById('main-status-banner');
+            const badge = document.getElementById('safe-hours-badge');
+            
+            // Update labels
+            document.getElementById('val-sleep').textContent = appState.sleep + " hrs";
+            document.getElementById('val-alcohol').textContent = appState.alcohol + " units";
+            
+            // Alcohol violation
+            if(alcClear > 0) {
+                banner.className = 'status-banner status-danger';
+                banner.innerHTML = `<span><i class="fas fa-ban"></i> INTOXICATED</span>`;
+                badge.textContent = `Wait ${alcClear}h`;
+                updateReport("0%", "0 Hours", "VIOLATION - ALCOHOL");
+                return;
+            }
+
+            // Fatigue analysis
+            let safeHours = violation === null ? 15 : violation;
+            
+            if(safeHours < 9) {
+                banner.className = 'status-banner status-warn';
+                banner.innerHTML = `<span><i class="fas fa-exclamation-triangle"></i> FATIGUE RISK</span>`;
+                updateReport(Math.round(score)+"%", safeHours+" Hours", "CAUTION - HIGH RISK");
+            } else {
+                banner.className = 'status-banner status-safe';
+                banner.innerHTML = `<span><i class="fas fa-check-circle"></i> FIT TO DRIVE</span>`;
+                updateReport(Math.round(score)+"%", safeHours+" Hours", "COMPLIANT");
+            }
+            badge.textContent = `${safeHours}h Safe Window`;
+            
+            // Enable/disable submit
+            toggleSubmit();
+        }
+
+        function updateReport(score, win, status) {
+            document.getElementById('rep-score').textContent = score;
+            document.getElementById('rep-window').textContent = win;
+            
+            const statusEl = document.getElementById('rep-status');
+            statusEl.textContent = status;
+            
+            if(status.includes("VIOLATION")) {
+                statusEl.style.color = "var(--danger)";
+            } else if(status.includes("CAUTION")) {
+                statusEl.style.color = "var(--warning)";
+            } else {
+                statusEl.style.color = "var(--success)";
+            }
+        }
+
+        function toggleSubmit() {
+            const checked = document.getElementById('declaration-check').checked;
+            const btn = document.getElementById('btn-submit');
+            const isCompliant = appState.alcohol === 0 && appState.sleep >= 4;
+            
+            btn.disabled = !checked || !isCompliant;
+            
+            if(!isCompliant) {
+                btn.innerHTML = "<i class='fas fa-ban'></i> Cannot Submit (Non-Compliant)";
+                btn.style.background = "var(--danger)";
+            } else {
+                btn.innerHTML = "<i class='fas fa-paper-plane'></i> Submit to Dispatch";
+                btn.style.background = "var(--company-primary)";
+            }
+        }
+
+        function submitShift() {
+            const btn = document.getElementById('btn-submit');
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting...";
+            
+            // Create assessment record
+            const assessment = {
+                id: Date.now(),
+                driverId: appState.currentUser.id,
+                driverName: appState.currentUser.name,
+                timestamp: new Date().toISOString(),
+                sleep: appState.sleep,
+                alcohol: appState.alcohol,
+                isNight: appState.isNight,
+                activeFactors: [...appState.activeFactors],
+                status: appState.alcohol > 0 ? 'violation' : (appState.sleep < 6 ? 'caution' : 'compliant')
+            };
+            
+            // Save to history
+            appState.checkHistory.push(assessment);
+            localStorage.setItem('checkHistory', JSON.stringify(appState.checkHistory));
+            
+            // If violation, escalate
+            if (assessment.status === 'violation') {
+                escalateViolation(assessment);
+            }
+            
+            // Update streak
+            updateComplianceStreak();
+            
+            setTimeout(() => {
+                btn.innerHTML = "<i class='fas fa-check'></i> Submitted Successfully";
+                btn.style.background = "var(--success)";
+                showNotification('Assessment submitted to dispatch', 'success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    btn.innerHTML = "<i class='fas fa-paper-plane'></i> Submit to Dispatch";
+                    btn.style.background = "var(--company-primary)";
+                    document.getElementById('declaration-check').checked = false;
+                    toggleSubmit();
+                }, 2000);
+            }, 1500);
+            
+            logActivity('assessment_submitted');
+        }
+
+        function printAssessment() {
+            const printContent = `
+                <html>
+                <head>
+                    <title>O-Licence Guard - Pre-Shift Assessment</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; }
+                        h1 { color: #1e40af; }
+                        .section { margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <h1>O-Licence Guard - Pre-Shift Assessment</h1>
+                    <div class="section">
+                        <strong>Driver:</strong> ${appState.currentUser.name}<br>
+                        <strong>Date:</strong> ${new Date().toLocaleString()}<br>
+                        <strong>Vehicle:</strong> ${appState.currentUser.vehicle || 'N/A'}
+                    </div>
+                    <div class="section">
+                        <strong>Sleep:</strong> ${appState.sleep} hours<br>
+                        <strong>Alcohol Units:</strong> ${appState.alcohol}<br>
+                        <strong>Night Shift:</strong> ${appState.isNight ? 'Yes' : 'No'}
+                    </div>
+                    <div class="section">
+                        <strong>Factors:</strong> ${appState.activeFactors.length > 0 ? appState.activeFactors.map(f => CONFIG.factors.find(cf => cf.id === f)?.name).join(', ') : 'None'}
+                    </div>
+                    <div class="section">
+                        <strong>Status:</strong> ${document.getElementById('rep-status').textContent}<br>
+                        <strong>Safe Hours:</strong> ${document.getElementById('rep-window').textContent}
+                    </div>
+                    <hr>
+                    <p>Assessment submitted electronically via O-Licence Guard Enterprise Portal.</p>
+                </body>
+                </html>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // ====================
+        // HISTORY & DATA
+        // ====================
+
+        function loadHistory() {
+            const historyList = document.getElementById('history-list');
+            
+            if (appState.checkHistory.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #64748b; padding: 40px;">No previous assessments found.</p>';
+                return;
+            }
+            
+            let html = '';
+            const recentHistory = appState.checkHistory
+                .filter(h => h.driverId === appState.currentUser?.id)
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 10);
+            
+            recentHistory.forEach(check => {
+                const date = new Date(check.timestamp);
+                const time = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const dateStr = date.toLocaleDateString();
+                
+                let statusClass = '';
+                if (check.status === 'compliant') statusClass = 'status-compliant';
+                else if (check.status === 'caution') statusClass = 'status-caution';
+                else statusClass = 'status-violation';
+                
+                html += `
+                    <div style="padding: 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">${dateStr} ${time}</div>
+                            <div style="color: #64748b; font-size: 0.9rem; margin-top: 4px;">
+                                Sleep: ${check.sleep}h | Alcohol: ${check.alcohol} units
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <span class="status-badge ${statusClass}">${check.status.toUpperCase()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyList.innerHTML = html;
+        }
+
+        function filterHistory() {
+            loadHistory(); // Simplified - in production would filter by date
+        }
+
+        function updateComplianceStreak() {
+            // Calculate compliance streak
+            const compliantDays = appState.checkHistory
+                .filter(c => c.status === 'compliant')
+                .map(c => new Date(c.timestamp).toDateString())
+                .filter((date, index, self) => self.indexOf(date) === index)
+                .sort((a, b) => new Date(b) - new Date(a));
+            
+            let streak = 0;
+            let currentDate = new Date();
+            
+            for (let i = 0; i < compliantDays.length; i++) {
+                const checkDate = new Date(compliantDays[i]);
+                if (currentDate.toDateString() === checkDate.toDateString()) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            
+            // Could display streak somewhere in UI
+        }
+
+        // ====================
+        // SUPERVISOR FUNCTIONS
+        // ====================
+
+        function updateFleetView() {
+            showNotification('Fleet view updated', 'info');
+        }
+
+        function exportReport() {
+            const report = {
+                generated: new Date().toISOString(),
+                period: 'daily',
+                totalDrivers: CONFIG.drivers.length,
+                checksCompleted: appState.checkHistory.filter(c => 
+                    new Date(c.timestamp).toDateString() === new Date().toDateString()
+                ).length,
+                complianceRate: '92%',
+                escalations: appState.escalations.length
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fleet-report-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            showNotification('Report exported successfully', 'success');
+        }
+
+        function generateReport() {
+            showNotification('Monthly compliance report generated', 'success');
+        }
+
+        function reviewEscalation(id) {
+            showNotification(`Reviewing escalation #${id}...`, 'info');
+        }
+
+        function scheduleAudit() {
+            showNotification('O-Licence audit scheduled for next month', 'success');
+        }
+
+        function escalateViolation(assessment) {
+            const escalation = {
+                ...assessment,
+                escalatedAt: new Date().toISOString(),
+                status: 'pending',
+                supervisor: null,
+                priority: 'high'
+            };
+            
+            appState.escalations.push(escalation);
+            localStorage.setItem('escalations', JSON.stringify(appState.escalations));
+            
+            showNotification('ALERT: Violation escalated to supervisor', 'error');
+            logActivity('violation_escalated');
+        }
+
+        // ====================
+        // NOTIFICATION SYSTEM
+        // ====================
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                animation: slideIn 0.3s ease;
+                max-width: 400px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            `;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ====================
+        // INITIALIZATION
+        // ====================
+
+        // Check if user is already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                appState.currentUser = JSON.parse(savedUser);
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('app-interface').style.display = 'block';
+                initializeApp();
+            }
+        });
+
+    </script>
+</body>
+</html>
